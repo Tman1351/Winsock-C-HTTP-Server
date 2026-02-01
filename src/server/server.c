@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "server.h"
+#include "logger.h"
 
 // link wisock
 #pragma comment(lib, "ws2_32.lib")
@@ -9,17 +10,17 @@
 // init winsock
 int initialize_winsock() {
     WSADATA wsaData;
-    printf("[INFO] Initializing Winsock\n");
+    GINFO("Initializing Winsock")
 
     int iResult;
 
     iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (iResult != 0) {
-        printf("[FAILURE] Error Code: %d\n", WSAGetLastError());
+        GFAILURE("Error Code: %d", WSAGetLastError());
         return 1;
     }
 
-    printf("[INFO] Winsock initialized\n");
+    GINFO("Winsock initialized");
     return 0;
 }
 
@@ -27,15 +28,15 @@ int initialize_winsock() {
 SOCKET create_socket() {
     SOCKET server_socket;
 
-    printf("[INFO] Creating socket\n");
+    GINFO("Creating socket");
     server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
     if (server_socket == INVALID_SOCKET) {
-        printf("[FAILURE] Could not create socket: %d\n", WSAGetLastError());
+        GFAILURE("Could not create socket: %d", WSAGetLastError());
         return INVALID_SOCKET;
     }
 
-    printf("[INFO] Socket created\n");
+    GINFO("Socket created");
     return server_socket;
 }
 
@@ -52,30 +53,30 @@ int bind_socket(SOCKET server_socket, int port) {
     server_addr.sin_port = htons(port);
 
     // bind socket
-    printf("[INFO] Binding socket\n");
+    GINFO("Binding socket");
 
     if (bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
 
-        printf("[ERROR] Bind failed with error code: %d\n", WSAGetLastError());
+        GERROR("Bind failed with error code: %d", WSAGetLastError());
         return 1;
     }
 
-    printf("[INFO] Socket bound successfully\n");
+    GINFO("Socket bound successfully");
     return 0;
 }
 
 // start listening
 int start_listening(SOCKET server_socket) {
-    printf("[INFO] Listening for connections\n");
+    GINFO("Listening for connections");
 
     if (listen(server_socket, BACKLOG) == SOCKET_ERROR) {
-        printf("[ERROR] Listen failed with error code: %d\n", WSAGetLastError());
+        GERROR("Listen failed with error code: %d", WSAGetLastError());
         closesocket(server_socket);
         return 1;
     }
 
-    printf("[INFO] Server is now listening on port %d\n", PORT);
-    printf("[INFO] Ctrl + Click: http://localhost:%d\n\n", PORT);
+    GINFO("Server is now listening on port %d", PORT);
+    GINFO("Ctrl + Click: http://localhost:%d", PORT);
     return 0;
 }
 
@@ -271,29 +272,29 @@ void handle_connections(SOCKET server_socket) {
     while (1) {
         client_addr_size = sizeof(client_addr);
 
-        printf("[INFO] Waiting for connection...\n");
+        GINFO("Waiting for connection...");
 
         client_socket = accept(server_socket, (struct sockaddr*)&client_addr, &client_addr_size);
 
         if (client_socket == INVALID_SOCKET) {
-            printf("[ERROR] Accept failed with error code: %d\n", WSAGetLastError());
+            GERROR("Accept failed with error code: %d", WSAGetLastError());
             continue;
         }
 
-        printf("[INFO] Connection accepted\n");
+        GINFO("Connection accepted");
 
         bytes_received = recv(client_socket, buffer, BUFFER_SIZE - 1, 0);
 
         if (bytes_received > 0) {
             buffer[bytes_received] = '\0';
-            printf("[INFO] Recived %d bytes:\n%s\n\n", bytes_received, buffer);
+            GINFO("Recived %d bytes:\n%s", bytes_received, buffer);
 
             send(client_socket, final_response, strlen(final_response), 0);
-            printf("[INFO] Response sent to client\n\n");
+            GINFO("Response sent to client");
         } else if (bytes_received == 0) {
-            printf("[INFO] Connection closing");
+            GINFO("Connection closing");
         } else {
-            printf("[ERROR] recv failed with error: %d\n", WSAGetLastError());
+            GERROR("recv failed with error: %d", WSAGetLastError());
         }
 
         closesocket(client_socket);
